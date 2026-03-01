@@ -1,0 +1,12 @@
+:root {
+    --paper: #fffdf5;
+    --paper-shadow: #d9d1be;
+    --ink: #1c3d5a;
+    --line: #b8d2ea;
+    --accent: #28557a;
+    --margin-line: #e08f8f;
+    --status: #5d5d5d;
+    --error: #bf3c3c;
+    --success: #2c7b44;
+    --line-height: 2.05rem;
+}
