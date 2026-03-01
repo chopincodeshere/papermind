@@ -9,6 +9,13 @@
 </head>
 <body>
     <div class="container">
+        <div class="theme-toggle-row">
+            <label class="theme-toggle" for="themeToggle">
+                <input type="checkbox" id="themeToggle" aria-label="Toggle dark mode">
+                <span class="theme-toggle-slider"></span>
+                <span id="themeToggleLabel">Dark Mode</span>
+            </label>
+        </div>
         <h1>PaperMind</h1>
         
         <div class="upload-section" id="uploadSection">
@@ -31,7 +38,6 @@
             <div class="input-container">
                 <input type="text" id="messageInput" placeholder="Ask a question about the PDF...">
                 <button id="sendButton">Send</button>
-                <span id="chatLoading" class="loading hidden"></span>
             </div>
             <button id="backButton" class="back-button">Upload Another PDF</button>
         </div>
@@ -52,20 +58,45 @@
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const uploadLoading = document.getElementById('uploadLoading');
-        const chatLoading = document.getElementById('chatLoading');
         const backButton = document.getElementById('backButton');
         const pdfPreview = document.getElementById('pdfPreview');
         const pdfPreviewContent = document.getElementById('pdfPreviewContent');
+        const themeToggle = document.getElementById('themeToggle');
+        const themeToggleLabel = document.getElementById('themeToggleLabel');
+        let typingMessageElement = null;
+
+        initializeTheme();
 
         // Event listeners
         uploadForm.addEventListener('submit', handleUpload);
         sendButton.addEventListener('click', sendMessage);
         backButton.addEventListener('click', resetToUpload);
+        themeToggle.addEventListener('change', () => {
+            const theme = themeToggle.checked ? 'dark' : 'light';
+            applyTheme(theme);
+        });
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
+
+        function initializeTheme() {
+            const storedTheme = localStorage.getItem('papermind-theme');
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const initialTheme = storedTheme || (prefersDarkMode ? 'dark' : 'light');
+            applyTheme(initialTheme, false);
+        }
+
+        function applyTheme(theme, persist = true) {
+            const isDark = theme === 'dark';
+            document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            themeToggle.checked = isDark;
+            themeToggleLabel.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            if (persist) {
+                localStorage.setItem('papermind-theme', isDark ? 'dark' : 'light');
+            }
+        }
 
         // Reset to upload screen
         function resetToUpload() {
@@ -78,7 +109,6 @@
             sessionId = '';
             chatHistory = [];
             uploadLoading.classList.add('hidden');
-            chatLoading.classList.add('hidden');
             uploadButton.disabled = false;
             sendButton.disabled = false;
             document.getElementById('pdfFile').value = '';
@@ -161,8 +191,8 @@
             // Add user message to chat
             addUserMessage(message);
             messageInput.value = '';
-            chatLoading.classList.remove('hidden');
             sendButton.disabled = true;
+            showBotTypingIndicator();
             
             try {
                 const response = await fetch('/pdf/chat', {
@@ -201,7 +231,7 @@
                 addBotMessage(`Error: ${error.message}`);
                 console.error('Chat error:', error);
             } finally {
-                chatLoading.classList.add('hidden');
+                removeBotTypingIndicator();
                 sendButton.disabled = false;
             }
         }
@@ -270,6 +300,28 @@
             messageElement.innerHTML = `<div class="message-content">${formatMessageContent(message)}</div>`;
             chatContainer.appendChild(messageElement);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showBotTypingIndicator() {
+            removeBotTypingIndicator();
+            typingMessageElement = document.createElement('div');
+            typingMessageElement.classList.add('message', 'bot-message', 'typing-message');
+            typingMessageElement.innerHTML = `
+                <div class="message-content">
+                    <span class="typing-dots" aria-label="Paper Mind is typing" role="status">
+                        <span></span><span></span><span></span>
+                    </span>
+                </div>
+            `;
+            chatContainer.appendChild(typingMessageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removeBotTypingIndicator() {
+            if (typingMessageElement) {
+                typingMessageElement.remove();
+                typingMessageElement = null;
+            }
         }
     </script>
 </body>
