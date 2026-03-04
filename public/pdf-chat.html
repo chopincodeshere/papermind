@@ -47,6 +47,8 @@
         // Global variables
         let sessionId = '';
         let chatHistory = [];
+        let uploadStatusPollInterval = null;
+        let activeUploadId = '';
 
         // DOM elements
         const uploadForm = document.getElementById('uploadForm');
@@ -100,6 +102,8 @@
 
         // Reset to upload screen
         function resetToUpload() {
+            stopUploadStatusPolling();
+            lastUploadSteps = [];
             chatSection.classList.add('hidden');
             uploadSection.classList.remove('hidden');
             uploadStatus.textContent = '';
@@ -129,21 +133,32 @@
             
             const formData = new FormData();
             formData.append('pdf', file);
+            activeUploadId = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            lastUploadSteps = [];
             
-            setUploadStatus('Uploading and processing PDF...', '');
+            setUploadStatus('Starting upload...', '');
             uploadLoading.classList.remove('hidden');
             uploadButton.disabled = true;
+            startUploadStatusPolling(activeUploadId);
             
             try {
                 const response = await fetch('/pdf/upload', {
                     method: 'POST',
+                    headers: {
+                        'x-upload-id': activeUploadId
+                    },
                     body: formData
                 });
                 
                 const data = await response.json();
+                const statusUploadId = data.uploadId || activeUploadId;
+                await refreshUploadStatus(statusUploadId);
                 
                 if (response.ok) {
-                    setUploadStatus(data.message || 'PDF uploaded and processed successfully!', 'success');
+                    setUploadStatus(renderUploadSteps([
+                        ...(getLastKnownSteps() || []),
+                        data.message || 'PDF uploaded and processed successfully!'
+                    ]), 'success');
                     sessionId = data.sessionId; // Store the session ID for later use
                     
                     // Show PDF preview if available
@@ -168,6 +183,7 @@
                 setUploadStatus(`Error: ${error.message}`, 'error');
                 console.error('Upload error:', error);
             } finally {
+                stopUploadStatusPolling();
                 uploadLoading.classList.add('hidden');
                 uploadButton.disabled = false;
             }
@@ -177,8 +193,53 @@
         function setUploadStatus(message, type) {
             uploadStatus.textContent = message;
             uploadStatus.className = 'status';
+            uploadStatus.style.whiteSpace = 'pre-line';
             if (type) {
                 uploadStatus.classList.add(type);
+            }
+        }
+
+        let lastUploadSteps = [];
+
+        function getLastKnownSteps() {
+            return lastUploadSteps;
+        }
+
+        function renderUploadSteps(steps) {
+            return steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
+        }
+
+        function startUploadStatusPolling(uploadId) {
+            stopUploadStatusPolling();
+            refreshUploadStatus(uploadId);
+            uploadStatusPollInterval = setInterval(() => {
+                refreshUploadStatus(uploadId);
+            }, 700);
+        }
+
+        function stopUploadStatusPolling() {
+            if (uploadStatusPollInterval) {
+                clearInterval(uploadStatusPollInterval);
+                uploadStatusPollInterval = null;
+            }
+            activeUploadId = '';
+        }
+
+        async function refreshUploadStatus(uploadId) {
+            if (!uploadId) return;
+            try {
+                const response = await fetch(`/pdf/upload-status/${encodeURIComponent(uploadId)}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (Array.isArray(data.steps) && data.steps.length > 0) {
+                    lastUploadSteps = data.steps;
+                    setUploadStatus(renderUploadSteps(data.steps), data.error ? 'error' : '');
+                }
+                if (data.done) {
+                    stopUploadStatusPolling();
+                }
+            } catch (error) {
+                console.error('Upload status polling error:', error);
             }
         }
 

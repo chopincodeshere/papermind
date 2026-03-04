@@ -9,6 +9,7 @@ const pdfController = new PdfController();
 
 // PDF upload and text extraction route
 router.post("/upload", upload.single("pdf"), pdfController.uploadAndExtract);
+router.get("/upload-status/:uploadId", pdfController.getUploadStatus);
 
 // Chat with PDF route
 router.post("/chat", pdfController.chatWithPdf);

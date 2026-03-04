@@ -33,6 +33,8 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
+/node_modules
+
 # cache
 .cache/
 .next/
@@ -42,3 +44,8 @@ yarn-error.log*
 *firebase.json
 
 LEARNINGS.MD
+
+eng.traineddata
+
+.__db_pdf-chat-gemini-embedding-001-v1.json
+.gitignore
