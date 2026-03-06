@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="72" x2="420" y2="436" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2F658F"/>
+      <stop offset="1" stop-color="#245173"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="176" y1="124" x2="364" y2="332" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF5"/>
+      <stop offset="1" stop-color="#F4F1E8"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="64" y="64" width="384" height="384" rx="96" fill="url(#bg)"/>
+
+  <g transform="translate(106 96)">
+    <rect x="70" y="28" width="212" height="264" rx="24" fill="url(#paper)"/>
+    <rect x="70" y="28" width="212" height="264" rx="24" stroke="#D9D1BE" stroke-width="6"/>
+
+    <line x1="98" y1="92" x2="254" y2="92" stroke="#B8D2EA" stroke-width="6" stroke-linecap="round"/>
+    <line x1="98" y1="126" x2="254" y2="126" stroke="#B8D2EA" stroke-width="6" stroke-linecap="round"/>
+    <line x1="98" y1="160" x2="254" y2="160" stroke="#B8D2EA" stroke-width="6" stroke-linecap="round"/>
+    <line x1="98" y1="194" x2="224" y2="194" stroke="#B8D2EA" stroke-width="6" stroke-linecap="round"/>
+
+    <line x1="116" y1="58" x2="116" y2="262" stroke="#E08F8F" stroke-width="5" stroke-linecap="round"/>
+
+    <path d="M148 246L178 214L200 236L246 188" stroke="#2C7B44" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="256" y="420" text-anchor="middle" fill="#F4F8FF" font-size="42" font-family="Nunito, Segoe UI, sans-serif" font-weight="700" letter-spacing="1">PM</text>
+</svg>

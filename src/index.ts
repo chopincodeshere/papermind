@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import chatRoutes from './routes/chatRoutes';
 import pdfRoutes from './routes/pdfRoutes';
+import authRoutes from './routes/authRoutes';
 import path from 'path';
 import fs from 'fs';
 
@@ -30,6 +31,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Routes
+app.use('/auth', authRoutes);
 app.use('/', chatRoutes);
 app.use('/pdf', pdfRoutes);
 
