@@ -594,7 +594,7 @@ export default function App() {
   if (!authUser) {
     return (
       <ThemeProvider theme={muiTheme}>
-        <div className="container">
+        <div className="container auth-container">
           <div className="theme-toggle-row">
             <div></div>
             <label className="theme-toggle" htmlFor="themeToggle">
@@ -613,68 +613,100 @@ export default function App() {
           </div>
           <div className="brand-header">
             <img
-              src="/assets/logo-minimal.svg"
+              src="/assets/logo-reference.svg"
               alt="PaperMind logo"
               className="brand-logo"
             />
             <h1>PaperMind</h1>
           </div>
-          <div className="upload-section">
-            <h2>{authMode === "signup" ? "Create Account" : "Sign In"}</h2>
-            <form onSubmit={handleAuthSubmit}>
-              <Stack spacing={1.5}>
-                <TextField
-                  label="Username or Email"
-                  value={authIdentifier}
-                  onChange={(e) => setAuthIdentifier(e.target.value)}
-                  required
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Password"
-                  type="password"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  required
-                  fullWidth
-                  size="small"
-                />
+          <div className="auth-shell">
+            <section className="auth-intro-card">
+              <p className="auth-chip">For students and research scholars</p>
+              <h2 className="auth-intro-title">Study faster with evidence-backed answers.</h2>
+              <p className="auth-intro-copy">
+                Upload papers, lecture notes, and reports. Ask focused questions and get
+                notebook-style explanations grounded in your PDF content.
+              </p>
+              <div className="auth-metrics">
+                <div className="auth-metric">
+                  <span>01</span>
+                  <p>Extract key findings from dense papers in minutes.</p>
+                </div>
+                <div className="auth-metric">
+                  <span>02</span>
+                  <p>Keep context across follow-up questions and revisions.</p>
+                </div>
+                <div className="auth-metric">
+                  <span>03</span>
+                  <p>Turn long documents into practical, study-ready notes.</p>
+                </div>
+              </div>
+            </section>
+
+            <div className="upload-section auth-form-card">
+              <h2 className="auth-form-title">
+                {authMode === "signup" ? "Create Account" : "Sign In"}
+              </h2>
+              <p className="auth-form-subtitle">
+                {authMode === "signup"
+                  ? "Start your research workspace."
+                  : "Continue your reading session."}
+              </p>
+              <form onSubmit={handleAuthSubmit}>
+                <Stack spacing={1.5}>
+                  <TextField
+                    label="Username or Email"
+                    value={authIdentifier}
+                    onChange={(e) => setAuthIdentifier(e.target.value)}
+                    required
+                    fullWidth
+                    size="small"
+                  />
+                  <TextField
+                    label="Password"
+                    type="password"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    required
+                    fullWidth
+                    size="small"
+                  />
+                  <Button
+                    type="submit"
+                    className="mui-note-btn"
+                    variant="contained"
+                    disableElevation
+                    disabled={authSubmitting}
+                  >
+                    {authSubmitting
+                      ? "Please wait..."
+                      : authMode === "signup"
+                        ? "Sign Up"
+                        : "Sign In"}
+                  </Button>
+                </Stack>
+              </form>
+              {authError && (
+                <Alert severity="error" sx={{ mt: 1.25 }}>
+                  {authError}
+                </Alert>
+              )}
+              <div className="status auth-switch-row">
+                {authMode === "signup" ? "Already have an account?" : "New user?"}{" "}
                 <Button
-                  type="submit"
-                  className="mui-note-btn"
-                  variant="contained"
-                  disableElevation
-                  disabled={authSubmitting}
+                  type="button"
+                  variant="text"
+                  size="small"
+                  onClick={() => {
+                    setAuthMode((prev) =>
+                      prev === "signup" ? "signin" : "signup",
+                    );
+                    setAuthError("");
+                  }}
                 >
-                  {authSubmitting
-                    ? "Please wait..."
-                    : authMode === "signup"
-                      ? "Sign Up"
-                      : "Sign In"}
+                  {authMode === "signup" ? "Sign in" : "Create one"}
                 </Button>
-              </Stack>
-            </form>
-            {authError && (
-              <Alert severity="error" sx={{ mt: 1.25 }}>
-                {authError}
-              </Alert>
-            )}
-            <div className="status" style={{ marginTop: 12, display: "flex", gap: 6, alignItems: "center" }}>
-              {authMode === "signup" ? "Already have an account?" : "New user?"}{" "}
-              <Button
-                type="button"
-                variant="text"
-                size="small"
-                onClick={() => {
-                  setAuthMode((prev) =>
-                    prev === "signup" ? "signin" : "signup",
-                  );
-                  setAuthError("");
-                }}
-              >
-                {authMode === "signup" ? "Sign in" : "Create one"}
-              </Button>
+              </div>
             </div>
           </div>
         </div>

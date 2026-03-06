@@ -66,17 +66,6 @@ export const resumeChat = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    if (!context.documentStorageUrl) {
-      res.status(400).json({ data: null, status: 0, message: 'Conversation is missing a document reference' });
-      return;
-    }
-
-    if (!fs.existsSync(context.documentStorageUrl)) {
-      res.status(404).json({ data: null, status: 0, message: 'Original PDF file not found. Please upload again.' });
-      return;
-    }
-
-    const pdfText = await pdfService.extractText(context.documentStorageUrl);
     const messages = await firestoreService.getConversationMessages(conversationId);
     const history = messages
       .filter((msg) => msg.sender === 'user' || msg.sender === 'assistant')
@@ -85,8 +74,18 @@ export const resumeChat = async (req: Request, res: Response): Promise<void> => 
         content: msg.content,
       }));
 
+    let pdfText = '';
+    let pdfPath = '';
+
+    if (context.documentStorageUrl && fs.existsSync(context.documentStorageUrl)) {
+      pdfPath = context.documentStorageUrl;
+      pdfText = await pdfService.extractText(context.documentStorageUrl);
+    } else {
+      pdfText = buildFallbackContext(history);
+    }
+
     const sessionId = createPdfSession({
-      pdfPath: context.documentStorageUrl,
+      pdfPath,
       pdfText,
       userId,
       documentId: context.documentId || '',
@@ -108,6 +107,22 @@ export const resumeChat = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({ data: null, status: 0, message: 'Failed to resume conversation' });
   }
 };
+
+function buildFallbackContext(history: Array<{ role: 'user' | 'assistant'; content: string }>): string {
+  if (!history.length) {
+    return 'No PDF text available for this resumed conversation.';
+  }
+
+  const conversationTranscript = history
+    .map((entry) => `${entry.role}: ${entry.content}`)
+    .join('\n');
+
+  return [
+    'Original PDF content is unavailable. Use this prior conversation as reference context.',
+    '',
+    conversationTranscript,
+  ].join('\n');
+}
 
 function getConversationId(req: Request): string {
   const rawConversationId = req.params.conversationId;

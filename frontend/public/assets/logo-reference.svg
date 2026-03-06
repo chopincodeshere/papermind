@@ -1,0 +1,62 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ring-gradient" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6366F1" />
+      <stop offset="1" stop-color="#A855F7" />
+    </linearGradient>
+    <linearGradient id="main-gradient" x1="40" y1="40" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6366F1" />
+      <stop offset="0.5" stop-color="#8B5CF6" />
+      <stop offset="1" stop-color="#A855F7" />
+    </linearGradient>
+    <linearGradient id="paper-gradient" x1="60" y1="50" x2="120" y2="130" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" />
+      <stop offset="1" stop-color="#E0E7FF" />
+    </linearGradient>
+    <linearGradient id="brain-gradient" x1="70" y1="65" x2="110" y2="105" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8B5CF6" />
+      <stop offset="1" stop-color="#6366F1" />
+    </linearGradient>
+    <filter id="glow-filter" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="90" cy="90" r="85" stroke="url(#ring-gradient)" stroke-width="2" stroke-dasharray="8 4" opacity="0.65" />
+  <circle cx="90" cy="90" r="70" fill="url(#main-gradient)" opacity="0.15" />
+  <circle cx="90" cy="90" r="60" fill="url(#main-gradient)" opacity="0.1" />
+
+  <g filter="url(#glow-filter)">
+    <path d="M60 45L110 45L125 60L125 135L60 135Z" fill="url(#paper-gradient)" opacity="0.95" />
+    <path d="M110 45L110 60L125 60Z" fill="#C7D2FE" />
+    <line x1="70" y1="75" x2="115" y2="75" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" />
+    <line x1="70" y1="85" x2="105" y2="85" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" />
+    <line x1="70" y1="95" x2="115" y2="95" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" />
+    <line x1="70" y1="105" x2="95" y2="105" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round" />
+  </g>
+
+  <g transform="translate(75 55)">
+    <circle cx="15" cy="15" r="6" fill="url(#brain-gradient)" />
+    <circle cx="35" cy="10" r="5" fill="url(#brain-gradient)" />
+    <circle cx="50" cy="20" r="4" fill="url(#brain-gradient)" />
+    <circle cx="10" cy="35" r="5" fill="url(#brain-gradient)" />
+    <circle cx="30" cy="30" r="7" fill="url(#brain-gradient)" />
+    <circle cx="48" cy="38" r="4" fill="url(#brain-gradient)" />
+
+    <line x1="15" y1="15" x2="35" y2="10" stroke="#8B5CF6" stroke-width="1.5" opacity="0.7" />
+    <line x1="35" y1="10" x2="50" y2="20" stroke="#8B5CF6" stroke-width="1.5" opacity="0.7" />
+    <line x1="15" y1="15" x2="30" y2="30" stroke="#8B5CF6" stroke-width="1.5" opacity="0.7" />
+    <line x1="35" y1="10" x2="30" y2="30" stroke="#8B5CF6" stroke-width="1.5" opacity="0.7" />
+    <line x1="10" y1="35" x2="30" y2="30" stroke="#8B5CF6" stroke-width="1.5" opacity="0.7" />
+    <line x1="30" y1="30" x2="48" y2="38" stroke="#8B5CF6" stroke-width="1.5" opacity="0.7" />
+    <line x1="50" y1="20" x2="48" y2="38" stroke="#8B5CF6" stroke-width="1.5" opacity="0.7" />
+  </g>
+
+  <circle cx="50" cy="55" r="2" fill="#A855F7" />
+  <circle cx="135" cy="75" r="2" fill="#6366F1" />
+  <circle cx="45" cy="125" r="1.5" fill="#8B5CF6" />
+</svg>

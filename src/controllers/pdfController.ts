@@ -161,13 +161,13 @@ export class PdfController {
         return;
       }
 
-      const { pdfPath, pdfText, conversationId } = session;
+      const { pdfText, conversationId } = session;
 
-      if (!fs.existsSync(pdfPath)) {
+      if (!pdfText || !pdfText.trim()) {
         deletePdfSession(sessionId);
         res.status(404).json({
-          message: 'PDF file no longer exists. Please upload it again.',
-          error: 'File not found',
+          message: 'Conversation context is unavailable. Please upload the PDF again.',
+          error: 'Missing context',
         });
         return;
       }
