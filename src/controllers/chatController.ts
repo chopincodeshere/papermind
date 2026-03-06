@@ -1,73 +1,137 @@
 import { Request, Response } from 'express';
+import fs from 'fs';
 import ChatFirestoreService from '../services/firebase';
-import { ChatMessage } from '../services/firebase';
-import { chatFlow } from '../flows/chatFlow'; // Extracted chat flow logic
+import { PdfService } from '../services/pdfService';
+import { createPdfSession } from '../services/pdfSessionStore';
 
-const chatService = ChatFirestoreService.getInstance();
+const firestoreService = ChatFirestoreService.getInstance();
+const pdfService = new PdfService();
 
-export const getChats = async (req: Request, res: Response) => {
+export const getChats = async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await chatService.getChatDocuments();
-    res.json(result);
+    const userId = getUserId(req);
+    const conversations = await firestoreService.getUserConversations(userId);
+    res.json({ data: conversations, status: 1, message: 'Chats fetched successfully' });
   } catch (error) {
-    console.error('Error fetching chat documents:', error);
-    res.status(500).json({ data: [], status: 0, message: 'Internal server error' });
+    console.error('Error fetching chats:', error);
+    res.status(500).json({ data: [], status: 0, message: 'Failed to fetch chats' });
   }
 };
 
-export const createChat = async (req: Request, res: Response) => {
+export const getChatMessages = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { history = [] } = req.body;
-    const result = await chatService.createChat(history);
-    res.json(result);
+    const conversationId = getConversationId(req);
+    if (!conversationId) {
+      res.status(400).json({ data: [], status: 0, message: 'Conversation ID is required' });
+      return;
+    }
+
+    const userId = getUserId(req);
+    const context = await firestoreService.getConversationContext(conversationId);
+    if (!context) {
+      res.status(404).json({ data: [], status: 0, message: 'Conversation not found' });
+      return;
+    }
+
+    if (context.userId && context.userId !== userId) {
+      res.status(403).json({ data: [], status: 0, message: 'Forbidden' });
+      return;
+    }
+
+    const messages = await firestoreService.getConversationMessages(conversationId);
+    res.json({ data: messages, status: 1, message: 'Conversation messages fetched successfully' });
   } catch (error) {
-    console.error('Error creating chat:', error);
-    res.status(500).json({ data: '', status: 0, message: 'Failed to create chat' });
+    console.error('Error fetching conversation messages:', error);
+    res.status(500).json({ data: [], status: 0, message: 'Failed to fetch conversation messages' });
   }
 };
 
-export const getChatHistory = async (req: Request, res: Response) => {
+export const resumeChat = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { chatId } = req.params;
-    const result = await chatService.getChatHistory(chatId);
-    res.json(result);
+    const conversationId = getConversationId(req);
+    if (!conversationId) {
+      res.status(400).json({ data: null, status: 0, message: 'Conversation ID is required' });
+      return;
+    }
+
+    const userId = getUserId(req);
+    const context = await firestoreService.getConversationContext(conversationId);
+    if (!context) {
+      res.status(404).json({ data: null, status: 0, message: 'Conversation not found' });
+      return;
+    }
+
+    if (context.userId && context.userId !== userId) {
+      res.status(403).json({ data: null, status: 0, message: 'Forbidden' });
+      return;
+    }
+
+    const messages = await firestoreService.getConversationMessages(conversationId);
+    const history = messages
+      .filter((msg) => msg.sender === 'user' || msg.sender === 'assistant')
+      .map((msg) => ({
+        role: msg.sender as 'user' | 'assistant',
+        content: msg.content,
+      }));
+
+    let pdfText = '';
+    let pdfPath = '';
+
+    if (context.documentStorageUrl && fs.existsSync(context.documentStorageUrl)) {
+      pdfPath = context.documentStorageUrl;
+      pdfText = await pdfService.extractText(context.documentStorageUrl);
+    } else {
+      pdfText = buildFallbackContext(history);
+    }
+
+    const sessionId = createPdfSession({
+      pdfPath,
+      pdfText,
+      userId,
+      documentId: context.documentId || '',
+      conversationId,
+    });
+
+    res.json({
+      data: {
+        conversationId,
+        sessionId,
+        messages,
+        history,
+      },
+      status: 1,
+      message: 'Conversation resumed successfully',
+    });
   } catch (error) {
-    console.error('Error fetching chat history:', error);
-    res.status(500).json({ data: null, status: 0, message: 'Internal server error' });
+    console.error('Error resuming conversation:', error);
+    res.status(500).json({ data: null, status: 0, message: 'Failed to resume conversation' });
   }
 };
 
-export const updateChatMessage = async (req: Request, res: Response) => {
-  try {
-    const { chatId } = req.params;
-    const { message } = req.body;
-
-    const newMessages = { role: "user" as "user" | "assistant", content: message };
-    await chatService.addSingleMessage(chatId, newMessages);
-
-    const chatHistory = await chatService.getChatHistory(chatId);
-    const data = { message, history: chatHistory.data?.history || [] };
-
-    const chatResult = await chatFlow.run(data);
-    const newMessagesFromAssistant = { role: "user" as "user" | "assistant", content: chatResult.result.response };
-
-    await chatService.addSingleMessage(chatId, newMessagesFromAssistant);
-
-    res.json({ data: chatResult.result.response, status: 1, message: 'Chat updated successfully' });
-  } catch (error) {
-    console.error('Error updating chat message:', error);
-    res.status(500).json({ data: null, status: 0, message: 'Internal server error' });
+function buildFallbackContext(history: Array<{ role: 'user' | 'assistant'; content: string }>): string {
+  if (!history.length) {
+    return 'No PDF text available for this resumed conversation.';
   }
-};
 
-export const converse = async (req: Request, res: Response) => {
-  try {
-    const { message, history } = req.body;
-    const result = await chatFlow.run({ message, history });
+  const conversationTranscript = history
+    .map((entry) => `${entry.role}: ${entry.content}`)
+    .join('\n');
 
-    res.json(result);
-  } catch (error) {
-    console.error('Error processing chat request:', error);
-    res.status(400).json({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
+  return [
+    'Original PDF content is unavailable. Use this prior conversation as reference context.',
+    '',
+    conversationTranscript,
+  ].join('\n');
+}
+
+function getConversationId(req: Request): string {
+  const rawConversationId = req.params.conversationId;
+  return Array.isArray(rawConversationId) ? rawConversationId[0] : rawConversationId || '';
+}
+
+function getUserId(req: Request): string {
+  if (req.user?.userId) {
+    return req.user.userId;
   }
-};
+  throw new Error('Missing authenticated user');
+}

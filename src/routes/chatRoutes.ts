@@ -1,19 +1,17 @@
 import express from 'express';
 import {
     getChats,
-    createChat,
-    getChatHistory,
-    updateChatMessage,
-    converse
+    getChatMessages,
+    resumeChat,
 } from '../controllers/chatController';
+import { requireAuth } from '../middleware/auth';
 
 const router = express.Router();
+router.use(requireAuth);
 
 // Define routes
 router.get('/chats', getChats);
-router.post('/chats/new', createChat);
-router.get('/chats/:chatId', getChatHistory);
-router.post('/chats/:chatId/update', updateChatMessage);
-router.post('/chat', converse);
+router.get('/chats/:conversationId/messages', getChatMessages);
+router.post('/chats/:conversationId/resume', resumeChat);
 
 export default router;
