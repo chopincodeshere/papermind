@@ -4,9 +4,15 @@ import {
   Backdrop,
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Collapse,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  LinearProgress,
   Stack,
   TextField,
   Drawer,
@@ -14,6 +20,9 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Select,
+  MenuItem,
+  FormControl,
   ThemeProvider,
   Typography,
   createTheme,
@@ -21,6 +30,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import "./styles/pdf-chat-vars.css";
 import "./styles/pdf-chat.css";
 
@@ -56,6 +66,24 @@ function formatMessageContent(text) {
     if (inList) {
       parts.push("</ul>");
       inList = false;
+    }
+
+    const h3Match = line.match(/^###\s+(.*)$/);
+    if (h3Match) {
+      parts.push(`<h3>${h3Match[1]}</h3>`);
+      continue;
+    }
+
+    const h2Match = line.match(/^##\s+(.*)$/);
+    if (h2Match) {
+      parts.push(`<h2>${h2Match[1]}</h2>`);
+      continue;
+    }
+
+    const h1Match = line.match(/^#\s+(.*)$/);
+    if (h1Match) {
+      parts.push(`<h1>${h1Match[1]}</h1>`);
+      continue;
     }
 
     if (line.trim() === "") {
@@ -152,6 +180,17 @@ export default function App() {
   const [historyExpanded, setHistoryExpanded] = useState(true);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [openingConversationId, setOpeningConversationId] = useState("");
+  const [selectedConversationIds, setSelectedConversationIds] = useState([]);
+  const [historySelectMode, setHistorySelectMode] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargets, setDeleteTargets] = useState([]);
+  const [deleteProgress, setDeleteProgress] = useState({
+    active: false,
+    total: 0,
+    completed: 0,
+    currentLabel: "",
+  });
+  const [deleteError, setDeleteError] = useState("");
   const [uploadProgressValue, setUploadProgressValue] = useState(0);
 
   const fileInputRef = useRef(null);
@@ -160,10 +199,7 @@ export default function App() {
   const authNoticeTimerRef = useRef(null);
 
   useEffect(() => {
-    document.body.setAttribute(
-      "data-theme",
-      theme === "dark" ? "dark" : "light",
-    );
+    document.body.setAttribute("data-theme", theme);
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
@@ -217,6 +253,11 @@ export default function App() {
     return fetch(url, { ...options, headers });
   };
 
+  const clearHistorySelection = () => {
+    setSelectedConversationIds([]);
+    setHistorySelectMode(false);
+  };
+
   const clearAuth = () => {
     authTokenRef.current = "";
     localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -225,6 +266,10 @@ export default function App() {
     setAuthPassword("");
     setAuthError("");
     setHistoryDrawerOpen(false);
+    setDeleteDialogOpen(false);
+    setDeleteTargets([]);
+    setDeleteError("");
+    clearHistorySelection();
     resetToUpload();
   };
 
@@ -373,7 +418,11 @@ export default function App() {
       const response = await apiFetch("/chats");
       const data = await response.json();
       if (response.ok) {
-        setPreviousChats(data.data || []);
+        const chats = data.data || [];
+        setPreviousChats(chats);
+        setSelectedConversationIds((prev) =>
+          prev.filter((id) => chats.some((chat) => chat.id === id)),
+        );
       }
     } catch {
       // best effort
@@ -383,6 +432,7 @@ export default function App() {
   };
 
   const openPreviousChat = async (conversationId) => {
+    if (historySelectMode || deleteProgress.active) return;
     setOpeningConversationId(conversationId);
     try {
       const response = await apiFetch(
@@ -414,6 +464,101 @@ export default function App() {
     } finally {
       setOpeningConversationId("");
     }
+  };
+
+  const toggleConversationSelection = (conversationId) => {
+    setSelectedConversationIds((prev) => {
+      if (prev.includes(conversationId)) {
+        return prev.filter((id) => id !== conversationId);
+      }
+      return [...prev, conversationId];
+    });
+  };
+
+  const promptDeleteConversations = (conversationIds) => {
+    const normalized = Array.from(
+      new Set((conversationIds || []).filter(Boolean)),
+    );
+    if (!normalized.length || deleteProgress.active) return;
+    setDeleteTargets(normalized);
+    setDeleteError("");
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteConversationById = async (conversationId) => {
+    const response = await apiFetch(`/chats/${encodeURIComponent(conversationId)}`, {
+      method: "DELETE",
+    });
+    const data = await readJsonSafe(response);
+    if (!response.ok) {
+      throw new Error(data?.message || "Failed to delete conversation.");
+    }
+  };
+
+  const confirmDeleteConversations = async () => {
+    if (!deleteTargets.length) return;
+
+    setDeleteError("");
+    setDeleteProgress({
+      active: true,
+      total: deleteTargets.length,
+      completed: 0,
+      currentLabel: "Preparing deletion...",
+    });
+
+    const failed = [];
+    const targetSet = new Set(deleteTargets);
+
+    for (let index = 0; index < deleteTargets.length; index += 1) {
+      const conversationId = deleteTargets[index];
+      const chatTitle = previousChats.find((chat) => chat.id === conversationId)?.title || "Conversation";
+
+      setDeleteProgress((prev) => ({
+        ...prev,
+        currentLabel: `Deleting: ${chatTitle}`,
+      }));
+
+      try {
+        await deleteConversationById(conversationId);
+      } catch (error) {
+        failed.push(error?.message || `Failed to delete ${chatTitle}`);
+      }
+
+      setDeleteProgress((prev) => ({
+        ...prev,
+        completed: index + 1,
+      }));
+    }
+
+    if (targetSet.has(activeConversationId)) {
+      resetToUpload();
+    }
+
+    await fetchPreviousChats();
+    setSelectedConversationIds((prev) =>
+      prev.filter((id) => !targetSet.has(id)),
+    );
+    setDeleteTargets([]);
+    setDeleteDialogOpen(false);
+    setDeleteProgress({
+      active: false,
+      total: 0,
+      completed: 0,
+      currentLabel: "",
+    });
+
+    if (failed.length) {
+      setDeleteError(failed[0]);
+      setStatus(failed[0], "error");
+      return;
+    }
+
+    const deletedCount = deleteTargets.length;
+    const successMessage = deletedCount === 1
+      ? "Conversation deleted successfully."
+      : `${deletedCount} conversations deleted successfully.`;
+    setStatus(successMessage, "success");
+    showAuthNotice(successMessage);
   };
 
   const handleUpload = async (event) => {
@@ -561,9 +706,13 @@ export default function App() {
     () =>
       createTheme({
         palette: {
-          mode: theme === "dark" ? "dark" : "light",
-          primary: { main: "#ad1f63" },
-          secondary: { main: "#7f2f3f" },
+          mode: (theme === "dark" || theme === "london" || theme === "cyberpunk") ? "dark" : "light",
+          primary: {
+            main: theme === "japan" ? "#d84570" : theme === "london" ? "#5e81ac" : theme === "new-york" ? "#e07a5f" : theme === "santorini" ? "#1e75c4" : theme === "cyberpunk" ? "#06b6d4" : theme === "nordic-winter" ? "#64748b" : theme === "vintage-library" ? "#8b5a2b" : theme === "forest" ? "#4a7c47" : "#ad1f63",
+          },
+          secondary: {
+            main: theme === "japan" ? "#b83359" : theme === "london" ? "#4c6a8d" : theme === "new-york" ? "#c46045" : theme === "santorini" ? "#165b9e" : theme === "cyberpunk" ? "#9333ea" : theme === "nordic-winter" ? "#475569" : theme === "vintage-library" ? "#634324" : theme === "forest" ? "#365e34" : "#7f2f3f",
+          },
         },
       }),
     [theme],
@@ -597,19 +746,31 @@ export default function App() {
         <div className="container auth-container">
           <div className="theme-toggle-row">
             <div></div>
-            <label className="theme-toggle" htmlFor="themeToggle">
-              <input
-                type="checkbox"
-                id="themeToggle"
-                aria-label="Toggle dark mode"
-                checked={theme === "dark"}
-                onChange={(e) => setTheme(e.target.checked ? "dark" : "light")}
-              />
-              <span className="theme-toggle-slider"></span>
-              <span id="themeToggleLabel">
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
-              </span>
-            </label>
+            <FormControl size="small" variant="outlined" sx={{ minWidth: 140 }}>
+              <Select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                sx={{
+                  bgcolor: "var(--input-bg)",
+                  color: "var(--ink)",
+                  borderRadius: "10px",
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--input-border)" },
+                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--input-focus)" },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "var(--input-focus)" }
+                }}
+              >
+                <MenuItem value="light">Light Mode</MenuItem>
+                <MenuItem value="dark">Dark Mode</MenuItem>
+                <MenuItem value="new-york">New York</MenuItem>
+                <MenuItem value="london">London</MenuItem>
+                <MenuItem value="japan">Japan</MenuItem>
+                <MenuItem value="santorini">Santorini</MenuItem>
+                <MenuItem value="cyberpunk">Cyberpunk</MenuItem>
+                <MenuItem value="nordic-winter">Nordic Winter</MenuItem>
+                <MenuItem value="vintage-library">Vintage Library</MenuItem>
+                <MenuItem value="forest">Forest</MenuItem>
+              </Select>
+            </FormControl>
           </div>
           <div className="brand-header">
             <img
@@ -725,6 +886,71 @@ export default function App() {
             {authNotice.message}
           </Alert>
         </Backdrop>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          if (deleteProgress.active) return;
+          setDeleteDialogOpen(false);
+          setDeleteError("");
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {deleteProgress.active ? "Deleting Conversations" : "Confirm Deletion"}
+        </DialogTitle>
+        <DialogContent>
+          {!deleteProgress.active && (
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              {deleteTargets.length === 1
+                ? "Delete this conversation and its related files from storage and Firestore?"
+                : `Delete ${deleteTargets.length} conversations and their related files from storage and Firestore?`}
+            </Typography>
+          )}
+          {deleteProgress.active && (
+            <Box sx={{ mt: 1, display: "grid", gap: 1 }}>
+              <Typography variant="body2">
+                {deleteProgress.currentLabel || "Deleting..."}
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={
+                  deleteProgress.total > 0
+                    ? (deleteProgress.completed / deleteProgress.total) * 100
+                    : 0
+                }
+              />
+              <Typography variant="caption" color="text.secondary">
+                {`${deleteProgress.completed} / ${deleteProgress.total} completed`}
+              </Typography>
+            </Box>
+          )}
+          {!!deleteError && !deleteProgress.active && (
+            <Alert severity="error" sx={{ mt: 1.25 }}>
+              {deleteError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              if (deleteProgress.active) return;
+              setDeleteDialogOpen(false);
+            }}
+            disabled={deleteProgress.active}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={confirmDeleteConversations}
+            disabled={deleteProgress.active || deleteTargets.length === 0}
+          >
+            {deleteProgress.active ? "Deleting..." : "Confirm Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Drawer
         anchor="left"
         open={historyDrawerOpen}
@@ -744,6 +970,46 @@ export default function App() {
               {historyExpanded ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
             <Collapse in={historyExpanded} timeout="auto" unmountOnExit>
+              <Box sx={{ px: 1.5, pb: 1, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                <Button
+                  size="small"
+                  variant={historySelectMode ? "contained" : "outlined"}
+                  onClick={() => {
+                    if (deleteProgress.active) return;
+                    if (historySelectMode) {
+                      clearHistorySelection();
+                    } else {
+                      setHistorySelectMode(true);
+                    }
+                  }}
+                  disabled={deleteProgress.active || historyLoading || previousChats.length === 0}
+                >
+                  {historySelectMode ? "Cancel Select" : "Select Chats"}
+                </Button>
+                <Button
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  onClick={() => promptDeleteConversations(selectedConversationIds)}
+                  disabled={
+                    deleteProgress.active ||
+                    historyLoading ||
+                    !historySelectMode ||
+                    selectedConversationIds.length === 0
+                  }
+                >
+                  Delete Selected
+                </Button>
+                <Button
+                  size="small"
+                  color="error"
+                  variant="contained"
+                  onClick={() => promptDeleteConversations(previousChats.map((chat) => chat.id))}
+                  disabled={deleteProgress.active || historyLoading || previousChats.length === 0}
+                >
+                  Delete All
+                </Button>
+              </Box>
               {historyLoading && (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
                   <CircularProgress size={22} />
@@ -759,9 +1025,24 @@ export default function App() {
                   <ListItemButton
                     key={chat.id}
                     selected={activeConversationId === chat.id}
-                    onClick={() => openPreviousChat(chat.id)}
-                    disabled={openingConversationId === chat.id}
+                    onClick={() => {
+                      if (historySelectMode) {
+                        toggleConversationSelection(chat.id);
+                        return;
+                      }
+                      openPreviousChat(chat.id);
+                    }}
+                    disabled={openingConversationId === chat.id || deleteProgress.active}
                   >
+                    {historySelectMode && (
+                      <Checkbox
+                        size="small"
+                        checked={selectedConversationIds.includes(chat.id)}
+                        onChange={() => toggleConversationSelection(chat.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        sx={{ mr: 0.5 }}
+                      />
+                    )}
                     <ListItemText
                       primary={chat.title}
                       secondary={new Date(chat.createdAt).toLocaleString()}
@@ -769,6 +1050,17 @@ export default function App() {
                     {openingConversationId === chat.id && (
                       <CircularProgress size={18} />
                     )}
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        promptDeleteConversations([chat.id]);
+                      }}
+                      disabled={deleteProgress.active || openingConversationId === chat.id}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
                   </ListItemButton>
                 ))}
             </Collapse>
@@ -795,19 +1087,31 @@ export default function App() {
             <MenuIcon />
           </IconButton>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <label className="theme-toggle" htmlFor="themeToggle">
-              <input
-                type="checkbox"
-                id="themeToggle"
-                aria-label="Toggle dark mode"
-                checked={theme === "dark"}
-                onChange={(e) => setTheme(e.target.checked ? "dark" : "light")}
-              />
-              <span className="theme-toggle-slider"></span>
-              <span id="themeToggleLabel">
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
-              </span>
-            </label>
+            <FormControl size="small" variant="outlined" sx={{ minWidth: 140 }}>
+              <Select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                sx={{
+                  bgcolor: "var(--input-bg)",
+                  color: "var(--ink)",
+                  borderRadius: "10px",
+                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--input-border)" },
+                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--input-focus)" },
+                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "var(--input-focus)" }
+                }}
+              >
+                <MenuItem value="light">Light Mode</MenuItem>
+                <MenuItem value="dark">Dark Mode</MenuItem>
+                <MenuItem value="new-york">New York</MenuItem>
+                <MenuItem value="london">London</MenuItem>
+                <MenuItem value="japan">Japan</MenuItem>
+                <MenuItem value="santorini">Santorini</MenuItem>
+                <MenuItem value="cyberpunk">Cyberpunk</MenuItem>
+                <MenuItem value="nordic-winter">Nordic Winter</MenuItem>
+                <MenuItem value="vintage-library">Vintage Library</MenuItem>
+                <MenuItem value="forest">Forest</MenuItem>
+              </Select>
+            </FormControl>
           </div>
         </div>
 

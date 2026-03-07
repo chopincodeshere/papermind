@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaperMind Logo</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Outfit:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    .logo-gradient {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+    }
+    .text-gradient {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .glow {
+      filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
+    }
+    .pulse-ring {
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.05); }
+    }
+    .float {
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .sparkle {
+      animation: sparkle 2s ease-in-out infinite;
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app-container" class="h-full w-full flex items-center justify-center overflow-auto" style="background: linear-gradient(145deg, #0f0f1a 0%, #1a1a2e 50%, #16162a 100%);">
+   <div class="text-center p-8"><!-- Logo Mark -->
+    <div class="float glow mb-8 inline-block">
+     <div class="relative"><!-- Outer glow ring -->
+      <div class="absolute inset-0 pulse-ring">
+       <svg width="180" height="180" viewbox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="90" cy="90" r="85" stroke="url(#ring-gradient)" stroke-width="2" stroke-dasharray="8 4" /> <defs>
+         <lineargradient id="ring-gradient" x1="0" y1="0" x2="180" y2="180">
+          <stop offset="0%" stop-color="#6366f1" />
+          <stop offset="100%" stop-color="#a855f7" />
+         </lineargradient>
+        </defs>
+       </svg>
+      </div><!-- Main Logo SVG -->
+      <svg width="180" height="180" viewbox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg"><defs>
+        <lineargradient id="main-gradient" x1="40" y1="40" x2="140" y2="140">
+         <stop offset="0%" stop-color="#6366f1" />
+         <stop offset="50%" stop-color="#8b5cf6" />
+         <stop offset="100%" stop-color="#a855f7" />
+        </lineargradient>
+        <lineargradient id="paper-gradient" x1="60" y1="50" x2="120" y2="130">
+         <stop offset="0%" stop-color="#ffffff" />
+         <stop offset="100%" stop-color="#e0e7ff" />
+        </lineargradient>
+        <lineargradient id="brain-gradient" x1="70" y1="65" x2="110" y2="105">
+         <stop offset="0%" stop-color="#8b5cf6" />
+         <stop offset="100%" stop-color="#6366f1" />
+        </lineargradient>
+        <filter id="glow-filter" x="-50%" y="-50%" width="200%" height="200%">
+         <fegaussianblur stddeviation="3" result="blur" />
+         <femerge>
+          <femergenode in="blur" />
+          <femergenode in="SourceGraphic" />
+         </femerge>
+        </filter>
+       </defs> <!-- Background circle --> <circle cx="90" cy="90" r="70" fill="url(#main-gradient)" opacity="0.15" /> <circle cx="90" cy="90" r="60" fill="url(#main-gradient)" opacity="0.1" /> <!-- Stylized paper/document --> <g filter="url(#glow-filter)">
+        <path d="M60 45 L110 45 L125 60 L125 135 L60 135 Z" fill="url(#paper-gradient)" opacity="0.95" />
+        <path d="M110 45 L110 60 L125 60 Z" fill="#c7d2fe" /> <!-- Paper lines -->
+        <line x1="70" y1="75" x2="115" y2="75" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" />
+        <line x1="70" y1="85" x2="105" y2="85" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" />
+        <line x1="70" y1="95" x2="115" y2="95" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" />
+        <line x1="70" y1="105" x2="95" y2="105" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" />
+       </g> <!-- AI Brain/Mind symbol overlaid --> <g transform="translate(75, 55)"><!-- Neural network nodes -->
+        <circle cx="15" cy="15" r="6" fill="url(#brain-gradient)" class="sparkle" />
+        <circle cx="35" cy="10" r="5" fill="url(#brain-gradient)" class="sparkle" style="animation-delay: 0.3s" />
+        <circle cx="50" cy="20" r="4" fill="url(#brain-gradient)" class="sparkle" style="animation-delay: 0.6s" />
+        <circle cx="10" cy="35" r="5" fill="url(#brain-gradient)" class="sparkle" style="animation-delay: 0.2s" />
+        <circle cx="30" cy="30" r="7" fill="url(#brain-gradient)" class="sparkle" style="animation-delay: 0.4s" />
+        <circle cx="48" cy="38" r="4" fill="url(#brain-gradient)" class="sparkle" style="animation-delay: 0.5s" /> <!-- Connection lines -->
+        <line x1="15" y1="15" x2="35" y2="10" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7" />
+        <line x1="35" y1="10" x2="50" y2="20" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7" />
+        <line x1="15" y1="15" x2="30" y2="30" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7" />
+        <line x1="35" y1="10" x2="30" y2="30" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7" />
+        <line x1="10" y1="35" x2="30" y2="30" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7" />
+        <line x1="30" y1="30" x2="48" y2="38" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7" />
+        <line x1="50" y1="20" x2="48" y2="38" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7" />
+       </g> <!-- Accent sparkles --> <circle cx="50" cy="55" r="2" fill="#a855f7" class="sparkle" /> <circle cx="135" cy="75" r="2" fill="#6366f1" class="sparkle" style="animation-delay: 0.5s" /> <circle cx="45" cy="125" r="1.5" fill="#8b5cf6" class="sparkle" style="animation-delay: 0.8s" />
+      </svg>
+     </div>
+    </div><!-- Brand Name -->
+    <h1 id="brand-name" class="text-gradient text-5xl font-bold mb-3" style="font-family: 'Space Grotesk', sans-serif;">PaperMind</h1><!-- Tagline -->
+    <p id="tagline" class="text-indigo-300/80 text-lg tracking-wider uppercase" style="font-family: 'Outfit', sans-serif; letter-spacing: 0.25em;">Research Intelligence</p><!-- Subtle divider -->
+    <div class="mt-6 flex items-center justify-center gap-3">
+     <div class="w-12 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
+     <div class="w-2 h-2 rounded-full bg-violet-500/60"></div>
+     <div class="w-12 h-px bg-gradient-to-r from-transparent via-violet-500/50 to-transparent"></div>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      brand_name: 'PaperMind',
+      tagline: 'Research Intelligence',
+      primary_color: '#8b5cf6',
+      secondary_color: '#6366f1',
+      text_color: '#c7d2fe',
+      background_color: '#0f0f1a',
+      accent_color: '#a855f7'
+    };
+
+    async function onConfigChange(config) {
+      const brandName = document.getElementById('brand-name');
+      const tagline = document.getElementById('tagline');
+      
+      if (brandName) {
+        brandName.textContent = config.brand_name || defaultConfig.brand_name;
+      }
+      if (tagline) {
+        tagline.textContent = config.tagline || defaultConfig.tagline;
+      }
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => {
+              config.background_color = value;
+              window.elementSdk.setConfig({ background_color: value });
+            }
+          },
+          {
+            get: () => config.primary_color || defaultConfig.primary_color,
+            set: (value) => {
+              config.primary_color = value;
+              window.elementSdk.setConfig({ primary_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.secondary_color || defaultConfig.secondary_color,
+            set: (value) => {
+              config.secondary_color = value;
+              window.elementSdk.setConfig({ secondary_color: value });
+            }
+          },
+          {
+            get: () => config.accent_color || defaultConfig.accent_color,
+            set: (value) => {
+              config.accent_color = value;
+              window.elementSdk.setConfig({ accent_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ['brand_name', config.brand_name || defaultConfig.brand_name],
+        ['tagline', config.tagline || defaultConfig.tagline]
+      ]);
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d82a60ef7d1540b',t:'MTc3MjgxMzYxNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

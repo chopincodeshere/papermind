@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
+import path from 'path';
 import ChatFirestoreService from '../services/firebase';
 import { PdfService } from '../services/pdfService';
-import { createPdfSession } from '../services/pdfSessionStore';
+import { createPdfSession, deleteSessionsByConversationIds } from '../services/pdfSessionStore';
 
 const firestoreService = ChatFirestoreService.getInstance();
 const pdfService = new PdfService();
@@ -108,6 +109,108 @@ export const resumeChat = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+export const deleteChat = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const conversationId = getConversationId(req);
+    if (!conversationId) {
+      res.status(400).json({ data: null, status: 0, message: 'Conversation ID is required' });
+      return;
+    }
+
+    const userId = getUserId(req);
+    const context = await firestoreService.getConversationContext(conversationId);
+    if (!context) {
+      res.status(404).json({ data: null, status: 0, message: 'Conversation not found' });
+      return;
+    }
+
+    if (context.userId && context.userId !== userId) {
+      res.status(403).json({ data: null, status: 0, message: 'Forbidden' });
+      return;
+    }
+
+    const deletion = await firestoreService.deleteConversationArtifacts(conversationId);
+    deleteSessionsByConversationIds([conversationId]);
+    const fileDeleted = deleteLocalFileIfPresent(deletion.documentStorageUrl);
+
+    res.json({
+      data: {
+        conversationId,
+        deletedMessages: deletion.deletedMessages,
+        deletedConversation: deletion.deletedConversation,
+        deletedDocument: deletion.deletedDocument,
+        deletedFile: fileDeleted,
+      },
+      status: 1,
+      message: 'Conversation deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting conversation:', error);
+    res.status(500).json({ data: null, status: 0, message: 'Failed to delete conversation' });
+  }
+};
+
+export const bulkDeleteChats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = getUserId(req);
+    const requestedIds = normalizeIds(req.body?.conversationIds);
+    const deleteAll = Boolean(req.body?.deleteAll);
+
+    let targetIds = requestedIds;
+    if (deleteAll || targetIds.length === 0) {
+      const allChats = await firestoreService.getUserConversations(userId);
+      targetIds = allChats.map((item) => item.id);
+    }
+
+    if (!targetIds.length) {
+      res.status(400).json({ data: null, status: 0, message: 'No conversations selected for deletion' });
+      return;
+    }
+
+    const deletedIds: string[] = [];
+    let deletedMessages = 0;
+    let deletedDocuments = 0;
+    let deletedFiles = 0;
+
+    for (const conversationId of targetIds) {
+      const context = await firestoreService.getConversationContext(conversationId);
+      if (!context) {
+        continue;
+      }
+
+      if (context.userId && context.userId !== userId) {
+        continue;
+      }
+
+      const deletion = await firestoreService.deleteConversationArtifacts(conversationId);
+      const fileDeleted = deleteLocalFileIfPresent(deletion.documentStorageUrl);
+
+      deletedIds.push(conversationId);
+      deletedMessages += deletion.deletedMessages;
+      deletedDocuments += deletion.deletedDocument ? 1 : 0;
+      deletedFiles += fileDeleted ? 1 : 0;
+    }
+
+    deleteSessionsByConversationIds(deletedIds);
+
+    res.json({
+      data: {
+        requested: targetIds.length,
+        deleted: deletedIds.length,
+        deletedIds,
+        deletedMessages,
+        deletedDocuments,
+        deletedFiles,
+      },
+      status: 1,
+      message: deletedIds.length ? 'Selected conversations deleted successfully' : 'No matching conversations were deleted',
+    });
+  } catch (error) {
+    console.error('Error bulk deleting conversations:', error);
+    res.status(500).json({ data: null, status: 0, message: 'Failed to delete conversations' });
+  }
+};
+
 function buildFallbackContext(history: Array<{ role: 'user' | 'assistant'; content: string }>): string {
   if (!history.length) {
     return 'No PDF text available for this resumed conversation.';
@@ -134,4 +237,31 @@ function getUserId(req: Request): string {
     return req.user.userId;
   }
   throw new Error('Missing authenticated user');
+}
+
+function normalizeIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const ids = value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean);
+  return Array.from(new Set(ids));
+}
+
+function deleteLocalFileIfPresent(storagePath: string | null): boolean {
+  if (!storagePath) return false;
+  try {
+    const resolvedPath = path.isAbsolute(storagePath)
+      ? storagePath
+      : path.resolve(process.cwd(), storagePath);
+
+    if (!fs.existsSync(resolvedPath)) {
+      return false;
+    }
+
+    fs.unlinkSync(resolvedPath);
+    return true;
+  } catch (error) {
+    console.error(`Failed to delete local file: ${storagePath}`, error);
+    return false;
+  }
 }

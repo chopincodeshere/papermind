@@ -58,6 +58,14 @@ interface ConversationContext {
   documentStorageUrl: string | null;
 }
 
+interface ConversationDeleteResult {
+  deletedMessages: number;
+  deletedConversation: boolean;
+  deletedDocument: boolean;
+  documentId: string | null;
+  documentStorageUrl: string | null;
+}
+
 interface AuthUserRecord {
   id: string;
   identifier: string;
@@ -435,6 +443,66 @@ class ChatFirestoreService {
       userId,
       documentId,
       documentStorageUrl,
+    };
+  }
+
+  public async deleteConversationArtifacts(conversationId: string): Promise<ConversationDeleteResult> {
+    const context = await this.getConversationContext(conversationId);
+    if (!context) {
+      return {
+        deletedMessages: 0,
+        deletedConversation: false,
+        deletedDocument: false,
+        documentId: null,
+        documentStorageUrl: null,
+      };
+    }
+
+    const conversationRef = this.db.collection('conversations').doc(conversationId);
+    const messageSnapshot = await this.db
+      .collection('messages')
+      .where('conversation', '==', conversationRef)
+      .get();
+
+    const messageDocs = messageSnapshot.docs;
+    for (let index = 0; index < messageDocs.length; index += 400) {
+      const chunk = messageDocs.slice(index, index + 400);
+      const batch = this.db.batch();
+      chunk.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
+    let deletedConversation = false;
+    const conversationDoc = await conversationRef.get();
+    if (conversationDoc.exists) {
+      await conversationRef.delete();
+      deletedConversation = true;
+    }
+
+    let deletedDocument = false;
+    if (context.documentId) {
+      const documentRef = this.db.collection('documents').doc(context.documentId);
+      const stillUsed = await this.db
+        .collection('conversations')
+        .where('document', '==', documentRef)
+        .limit(1)
+        .get();
+
+      if (stillUsed.empty) {
+        const documentDoc = await documentRef.get();
+        if (documentDoc.exists) {
+          await documentRef.delete();
+          deletedDocument = true;
+        }
+      }
+    }
+
+    return {
+      deletedMessages: messageDocs.length,
+      deletedConversation,
+      deletedDocument,
+      documentId: context.documentId,
+      documentStorageUrl: context.documentStorageUrl,
     };
   }
 
