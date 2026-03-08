@@ -14,7 +14,7 @@ const ai = genkit({
       embedder: googleAI.embedder('gemini-embedding-001'),
     }])
   ],
-  model: googleAI.model('gemini-2.5-flash'),
+  model: googleAI.model('gemini-2.0-flash'),
 });
 
 // Get references to the vector store

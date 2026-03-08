@@ -5,7 +5,7 @@ import { VectorStoreService } from '../services/vectorStoreService';
 // Initialize Genkit with Google AI
 const ai = genkit({
   plugins: [googleAI()],
-  model: googleAI.model('gemini-2.5-flash'),
+  model: googleAI.model('gemini-2.0-flash'),
 });
 
 // Initialize vector store

@@ -51,3 +51,5 @@ eng.traineddata
 .__db_pdf-chat-gemini-embedding-001-v1.json
 .gitignore
 
+.vercel
+.env*.local

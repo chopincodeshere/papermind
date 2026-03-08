@@ -36,6 +36,14 @@ import "./styles/pdf-chat.css";
 
 const THEME_KEY = "papermind-theme";
 const AUTH_TOKEN_KEY = "papermind-auth-token";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+
+function withApiBase(path) {
+  if (!API_BASE_URL) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
+}
 
 function escapeHtml(value) {
   return value
@@ -250,7 +258,7 @@ export default function App() {
     if (authTokenRef.current) {
       headers.Authorization = `Bearer ${authTokenRef.current}`;
     }
-    return fetch(url, { ...options, headers });
+    return fetch(withApiBase(url), { ...options, headers });
   };
 
   const clearHistorySelection = () => {
@@ -299,7 +307,7 @@ export default function App() {
     try {
       const endpoint = authMode === "signup" ? "/auth/signup" : "/auth/signin";
       const currentMode = authMode;
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password }),

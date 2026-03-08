@@ -35,16 +35,6 @@ app.use('/auth', authRoutes);
 app.use('/', chatRoutes);
 app.use('/pdf', pdfRoutes);
 
-// Serve the PDF chat page
-app.get('/pdf-chat', (req, res) => {
-  if (fs.existsSync(path.join(frontendDistDir, 'index.html'))) {
-    res.sendFile(path.join(frontendDistDir, 'index.html'));
-    return;
-  }
-
-  res.sendFile(path.join(publicDir, 'pdf-chat.html'));
-});
-
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

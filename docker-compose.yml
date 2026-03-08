@@ -1,0 +1,21 @@
+services:
+  papermind:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: papermind-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase.json
+    volumes:
+      - papermind_uploads:/app/uploads
+      - ./src/config/firebase.json:/run/secrets/firebase.json:ro
+    restart: unless-stopped
+
+volumes:
+  papermind_uploads:

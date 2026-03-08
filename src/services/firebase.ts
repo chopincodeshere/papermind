@@ -3,6 +3,9 @@ import { Firestore, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import fs from 'fs';
 import path from 'path';
 
+const DISABLE_PROMPT_LIMIT = parseBooleanEnv(process.env.DISABLE_PROMPT_LIMIT);
+const DEFAULT_DEMO_RATE_LIMIT = parseRateLimitEnv(process.env.DEMO_RATE_LIMIT, 5);
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -526,13 +529,14 @@ class ChatFirestoreService {
 
       const userRef = this.db.collection('users').doc();
       const now = Timestamp.now();
+      const initialRateLimit = DISABLE_PROMPT_LIMIT ? null : DEFAULT_DEMO_RATE_LIMIT;
       await userRef.set({
         identifier: identifier.trim(),
         identifierLower,
         passwordHash,
         name: identifier.trim(),
         user_type: 'demo',
-        rate_limit: 5,
+        rate_limit: initialRateLimit,
         prompts_used: 0,
         createdAt: now,
       });
@@ -609,7 +613,11 @@ class ChatFirestoreService {
 
         const data = doc.data() || {};
         const userType = String(data.user_type || 'demo');
-        const rateLimit = typeof data.rate_limit === 'number' ? data.rate_limit : (userType === 'demo' ? 5 : null);
+        const configuredDefaultLimit = userType === 'demo' ? DEFAULT_DEMO_RATE_LIMIT : null;
+        const storedRateLimit = typeof data.rate_limit === 'number' ? data.rate_limit : null;
+        const rateLimit = DISABLE_PROMPT_LIMIT
+          ? null
+          : resolveRateLimit(storedRateLimit, configuredDefaultLimit);
         const promptsUsed = typeof data.prompts_used === 'number' ? data.prompts_used : 0;
 
         if (rateLimit !== null && promptsUsed >= rateLimit) {
@@ -638,6 +646,42 @@ class ChatFirestoreService {
       return { ok: false, remaining: 0, message: 'Unable to validate prompt quota right now.' };
     }
   }
+}
+
+function parseBooleanEnv(value: string | undefined): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function parseRateLimitEnv(value: string | undefined, fallback: number | null): number | null {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'none' || normalized === 'null' || normalized === 'unlimited' || normalized === 'off') {
+    return null;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function resolveRateLimit(storedRateLimit: number | null, configuredRateLimit: number | null): number | null {
+  if (configuredRateLimit === null) {
+    return null;
+  }
+
+  if (storedRateLimit === null) {
+    return configuredRateLimit;
+  }
+
+  return Math.max(storedRateLimit, configuredRateLimit);
 }
 
 export { ChatMessage };

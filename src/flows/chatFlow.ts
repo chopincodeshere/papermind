@@ -4,7 +4,7 @@ import { googleAI } from '@genkit-ai/google-genai';
 // Initialize Genkit with Google AI
 const ai = genkit({
   plugins: [googleAI()],
-  model: googleAI.model('gemini-2.5-flash'),
+  model: googleAI.model('gemini-2.0-flash'),
 });
 
 // Define input schemas with Zod for type safety
