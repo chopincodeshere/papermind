@@ -3,6 +3,9 @@ import { Firestore, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import fs from 'fs';
 import path from 'path';
 
+const ENABLE_PROMPT_LIMIT = parseBooleanEnv(process.env.ENABLE_PROMPT_LIMIT);
+const DEFAULT_DEMO_RATE_LIMIT = parseRateLimitEnv(process.env.DEMO_RATE_LIMIT, 5);
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -526,6 +529,7 @@ class ChatFirestoreService {
 
       const userRef = this.db.collection('users').doc();
       const now = Timestamp.now();
+      const initialRateLimit = ENABLE_PROMPT_LIMIT ? DEFAULT_DEMO_RATE_LIMIT : null;
       await userRef.set({
         identifier: identifier.trim(),
         identifierLower,
@@ -600,6 +604,10 @@ class ChatFirestoreService {
 
   public async consumePromptQuota(userId: string): Promise<{ ok: boolean; remaining: number; message?: string }> {
     try {
+      if (!ENABLE_PROMPT_LIMIT) {
+        return { ok: true, remaining: Number.MAX_SAFE_INTEGER };
+      }
+
       const userRef = this.db.collection('users').doc(userId);
       const result = await this.db.runTransaction(async (tx) => {
         const doc = await tx.get(userRef);
@@ -609,7 +617,9 @@ class ChatFirestoreService {
 
         const data = doc.data() || {};
         const userType = String(data.user_type || 'demo');
-        const rateLimit = typeof data.rate_limit === 'number' ? data.rate_limit : (userType === 'demo' ? 5 : null);
+        const configuredDefaultLimit = userType === 'demo' ? DEFAULT_DEMO_RATE_LIMIT : null;
+        const storedRateLimit = typeof data.rate_limit === 'number' ? data.rate_limit : null;
+        const rateLimit = resolveRateLimit(storedRateLimit, configuredDefaultLimit);
         const promptsUsed = typeof data.prompts_used === 'number' ? data.prompts_used : 0;
 
         if (rateLimit !== null && promptsUsed >= rateLimit) {
